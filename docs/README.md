@@ -1,17 +1,17 @@
 <p align="center"><img src="../src/assets/images/icon/icon.png" alt="icon-launcher"></p>
 
-<h1 align="center">Selvania Launcher</h1>
+<h1 align="center">Deepstone Launcher</h1>
 
 [<p align="center">]()
-![GitHub all releases](https://img.shields.io/github/downloads/luuxis/Selvania-Launcher/total?style=for-the-badge)
-![Discord](https://img.shields.io/discord/819729377650278420?style=for-the-badge)
-![GitHub package.json version](https://img.shields.io/github/package-json/v/luuxis/Selvania-Launcher?style=for-the-badge)
+![GitHub all releases](https://img.shields.io/github/downloads/DeepstoneStudio/Deepstone-Launchers/total?style=for-the-badge)
+![Discord](https://img.shields.io/discord/1391186636888346754?style=for-the-badge)
+![GitHub package.json version](https://img.shields.io/github/package-json/v/DeepstoneStudio/Deepstone-Launchers?style=for-the-badge)
 [<p align="center">]()
-![GitHub forks](https://img.shields.io/github/forks/luuxis/Selvania-Launcher?style=for-the-badge)
-![GitHub Repo stars](https://img.shields.io/github/stars/luuxis/Selvania-Launcher?style=for-the-badge)
+![GitHub forks](https://img.shields.io/github/forks/DeepstoneStudio/Deepstone-Launchers?style=for-the-badge)
+![GitHub Repo stars](https://img.shields.io/github/stars/DeepstoneStudio/Deepstone-Launchers?style=for-the-badge)
 
 <p align="center">
-    <a href="http://discord.luuxis.fr">
+    <a href="http://deep.deepstone.fr/discord">
         <img src="https://invidget.switchblade.xyz/e9q7Yr2cuQ">
     </a>
 </p>
