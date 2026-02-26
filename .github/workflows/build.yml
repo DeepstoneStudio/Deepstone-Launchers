@@ -9,21 +9,26 @@ permissions:
 
 jobs:
   build:
+    name: Build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-14]
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: 18
 
-      - run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Build
+      - name: Build Launcher
         run: npm run build
 
       - name: Upload artifacts
@@ -33,18 +38,19 @@ jobs:
           path: dist/*
 
   release:
+    name: Release
     needs: build
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.bump.outputs.version }}
 
     steps:
       - uses: actions/checkout@v4
 
+      # ⏱ Start timer
       - name: Start timer
-        id: timer
-        run: echo "start=$(date +%s)" >> $GITHUB_OUTPUT
+        id: start
+        run: echo "time=$(date +%s)" >> $GITHUB_OUTPUT
 
+      # 🔢 Auto bump PATCH
       - name: Bump version
         id: bump
         run: |
@@ -56,17 +62,60 @@ jobs:
           jq ".version = \"$NEW\"" package.json > tmp.json && mv tmp.json package.json
           echo "version=$NEW" >> $GITHUB_OUTPUT
 
-      - name: Generate changelog
+      # 🧠 Smart changelog
+      - name: Generate smart changelog
         id: log
         run: |
-          echo "log<<EOF" >> $GITHUB_OUTPUT
-          git log -10 --pretty=format:"• %s" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          COMMITS=$(git log -20 --pretty=format:"%s")
 
+          FEATURES=""
+          FIXES=""
+          PERF=""
+          OTHER=""
+
+          while IFS= read -r line; do
+            if [[ "$line" == *"Bump version"* ]] || [[ "$line" == *"Merge"* ]]; then
+              continue
+            fi
+
+            if [[ "$line" == feat* ]]; then
+              FEATURES+="• ${line#feat: }\n"
+            elif [[ "$line" == fix* ]]; then
+              FIXES+="• ${line#fix: }\n"
+            elif [[ "$line" == perf* ]]; then
+              PERF+="• ${line#perf: }\n"
+            else
+              OTHER+="• $line\n"
+            fi
+          done <<< "$COMMITS"
+
+          CHANGELOG=""
+
+          if [ ! -z "$FEATURES" ]; then
+            CHANGELOG+="### 🚀 Nouveautés\n$FEATURES\n"
+          fi
+
+          if [ ! -z "$FIXES" ]; then
+            CHANGELOG+="### 🛠 Corrections\n$FIXES\n"
+          fi
+
+          if [ ! -z "$PERF" ]; then
+            CHANGELOG+="### ⚡ Optimisations\n$PERF\n"
+          fi
+
+          if [ ! -z "$OTHER" ]; then
+            CHANGELOG+="### 📦 Divers\n$OTHER\n"
+          fi
+
+          CHANGELOG=$(echo -e "$CHANGELOG" | sed ':a;N;$!ba;s/\n/\\n/g')
+          echo "log=$CHANGELOG" >> $GITHUB_OUTPUT
+
+      # 📥 Download builds
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
 
+      # 🚀 Create Release + Upload assets
       - name: Create Release
         id: release
         uses: softprops/action-gh-release@v2
@@ -83,33 +132,28 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.DEEP_TOKEN }}
 
+      # ⏱ End timer
       - name: End timer
         id: end
         run: |
           END=$(date +%s)
-          START=${{ steps.timer.outputs.start }}
+          START=${{ steps.start.outputs.time }}
           DURATION=$((END - START))
           echo "duration=$DURATION" >> $GITHUB_OUTPUT
 
+      # 🔔 Discord Embed
       - name: Discord Notification
+        if: success()
         run: |
           VERSION=${{ steps.bump.outputs.version }}
           DURATION=${{ steps.end.outputs.duration }}
           WEBHOOK=${{ secrets.DISCORD_WEBHOOK_URL }}
-
           RELEASE_URL="https://github.com/${{ github.repository }}/releases/latest"
-
-          EXE_URL=$(ls artifacts/**/**/*.exe 2>/dev/null | head -n1)
-          DMG_URL=$(ls artifacts/**/**/*.dmg 2>/dev/null | head -n1)
-          APPIMAGE_URL=$(ls artifacts/**/**/*.AppImage 2>/dev/null | head -n1)
 
           jq -n \
             --arg version "$VERSION" \
             --arg duration "$DURATION sec" \
             --arg release "$RELEASE_URL" \
-            --arg exe "$EXE_URL" \
-            --arg dmg "$DMG_URL" \
-            --arg app "$APPIMAGE_URL" \
             '{
               embeds: [{
                 title: "🚀 Nouvelle Release Deepstone",
@@ -117,10 +161,7 @@ jobs:
                 fields: [
                   {name: "🧩 Version", value: $version, inline: true},
                   {name: "⏱ Build time", value: $duration, inline: true},
-                  {name: "⬇ Windows", value: ($exe // "N/A"), inline: false},
-                  {name: "⬇ macOS", value: ($dmg // "N/A"), inline: false},
-                  {name: "⬇ Linux", value: ($app // "N/A"), inline: false},
-                  {name: "🔗 Release", value: $release, inline: false}
+                  {name: "🔗 Télécharger", value: $release, inline: false}
                 ],
                 footer: {text: "Deepstone Studio CI"},
                 timestamp: now | todate
