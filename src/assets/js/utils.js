@@ -7,6 +7,7 @@ const { ipcRenderer } = require('electron')
 const { Status } = require('minecraft-java-core')
 const fs = require('fs');
 const pkg = require('../package.json');
+const {status} = require ('minecraft-server-util') 
 
 import config from './utils/config.js';
 import database from './utils/database.js';
@@ -83,37 +84,41 @@ async function headplayer(skinBase64) {
 }
 
 async function setStatus(opt) {
-    let nameServerElement = document.querySelector('.server-status-name')
-    let statusServerElement = document.querySelector('.server-status-text')
-    let playersOnline = document.querySelector('.status-player-count .player-count')
+    const nameServerElement = document.querySelector('.server-status-name');
+    const statusServerElement = document.querySelector('.server-status-text');
+    const playersOnline = document.querySelector('.status-player-count .player-count');
+    const badge = document.querySelector('.status-player-count');
 
     if (!opt) {
-        statusServerElement.classList.add('red')
-        statusServerElement.innerHTML = `Ferme - 0 ms`
-        document.querySelector('.status-player-count').classList.add('red')
-        playersOnline.innerHTML = '0'
-        return
+        statusServerElement.classList.add('red');
+        statusServerElement.textContent = `Fermé - 0 ms`;
+        badge.classList.add('red');
+        playersOnline.textContent = '0';
+        return;
     }
 
-    let { ip, port, nameServer } = opt
-    nameServerElement.innerHTML = nameServer
-    let status = new Status(ip, port);
-    let statusServer = await status.getStatus().then(res => res).catch(err => err);
+    const { ip, port, nameServer } = opt;
+    nameServerElement.textContent = nameServer;
 
-    if (!statusServer.error) {
-        statusServerElement.classList.remove('red')
-        document.querySelector('.status-player-count').classList.remove('red')
-        statusServerElement.innerHTML = `En ligne - ${statusServer.ms ? statusServer.ms : 0} ms`
-        playersOnline.innerHTML = statusServer.playersConnect ? statusServer.playersConnect : '0'
-    } else {
-        statusServerElement.classList.add('red')
-        statusServerElement.innerHTML = `Ferme - 0 ms`
-        document.querySelector('.status-player-count').classList.add('red')
-        playersOnline.innerHTML = '0'
-    }
+    const update = async () => {
+        try {
+            const srv = new Status(ip, port);
+            const statusServer = await srv.getStatus();
+
+            statusServerElement.classList.remove('red');
+            badge.classList.remove('red');
+            statusServerElement.textContent = `En ligne - ${statusServer.ms || 0} ms`;
+            playersOnline.textContent = statusServer.playersConnect || '0';
+        } catch (err) {
+            statusServerElement.classList.add('red');
+            statusServerElement.textContent = `Fermé - 0 ms`;
+            badge.classList.add('red');
+            playersOnline.textContent = '0';
+        }
+    };
+    await update();
+    setInterval(update, 60000); // Met à jour toutes les 60 secondes
 }
-
-
 export {
     appdata as appdata,
     changePanel as changePanel,

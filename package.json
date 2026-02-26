@@ -25,48 +25,7 @@
         "electron-store": "^8.2.0",
         "electron-updater": "^6.7.3",
         "minecraft-java-core": "^4.2.5",
-        "node-fetch": "^2.7.0",
-        "xml-js": "^1.6.11"
-    },
-    "devDependencies": {
-        "cross-env": "^10.1.0",
-        "electron": "^40.0.0",
-        "electron-builder": "^26.0.12",
-        "javascript-obfuscator": "^5.1.0",
-        "jimp": "^1.6.0",
-        "nodemon": "^3.1.11",
-        "png2icons": "^2.0.1"
-    },
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/DeepstoneStudio/Deepstone-Launchers.git"
-    }
-    "name": "deepstone-launcher",
-    "preductname": "Deepstone Launcher",
-    "version": "0.0.3",
-    "description": "Launcher Mincraft pour le serveur Deepstone",
-    "main": "src/app.js",
-    "author": {
-        "name": "Deepstone-Studio,luuxis, Inc.",
-        "email": "deepstone.studio@gamil.com",
-        "url": "https://deep.deepstone.fr"
-    },
-    "url": "https://deep.deepstone.fr/launcher",
-    "scripts": {
-        "start": "cross-env-shell NODE_ENV=dev electron .",
-        "dev": "cross-env-shell DEV_TOOL=open nodemon --exec npm start",
-        "build": "node build.js --obf=true --build=platform",
-        "icon": "node build.js --icon=https://deep.deepstone.fr/storage/img/deepstone-server-survie.png"
-    },
-    "license": "CCANC",
-    "nodemonConfig": {
-        "ext": "js,html,css",
-        "ignore": "**/test"
-    },
-    "dependencies": {
-        "electron-store": "^8.2.0",
-        "electron-updater": "^6.7.3",
-        "minecraft-java-core": "^4.2.5",
+        "minecraft-server-util": "^5.4.4",
         "node-fetch": "^2.7.0",
         "xml-js": "^1.6.11"
     },
