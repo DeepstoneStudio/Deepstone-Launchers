@@ -12,11 +12,11 @@ jobs:
       changelog: ${{ steps.changelog.outputs.log }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # 🔐 Auto bump patch version
+      # 🔐 Auto bump PATCH
       - name: Bump version
         id: bump
         run: |
@@ -28,7 +28,7 @@ jobs:
           jq ".version = \"$NEW\"" package.json > tmp.json && mv tmp.json package.json
           echo "version=$NEW" >> $GITHUB_OUTPUT
 
-      # 🏷️ Generate changelog from commits
+      # 🏷️ Changelog auto (10 commits)
       - name: Generate changelog
         id: changelog
         run: |
@@ -44,7 +44,7 @@ jobs:
       created: ${{ steps.create.outputs.created }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Create release if not exists
         id: create
@@ -83,26 +83,23 @@ jobs:
         os: [macos-14, ubuntu-latest, windows-latest]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: 18.x
 
-      - name: Install
-        run: npm ci
+      - run: npm ci
 
       - name: Build with timer
         run: |
           START=$(date +%s)
           npm run build
           END=$(date +%s)
-          echo "DURATION=$((END - START))" >> $GITHUB_ENV
+          echo $((END - START)) > duration.txt
 
-      - name: Save duration
-        run: echo "${{ env.DURATION }}" > duration.txt
-
-      - uses: actions/upload-artifact@v3
+      - name: Upload duration
+        uses: actions/upload-artifact@v4
         with:
           name: duration-${{ matrix.os }}
           path: duration.txt
@@ -113,14 +110,16 @@ jobs:
     if: always()
 
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
 
-      - name: Calculate duration
+      - name: Calculate total duration
         id: duration
         run: |
           TOTAL=0
-          for f in duration-*/duration.txt; do
-            D=$(cat $f)
+          for f in artifacts/duration-*/duration.txt; do
+            D=$(cat "$f")
             TOTAL=$((TOTAL + D))
           done
           echo "total=$TOTAL" >> $GITHUB_OUTPUT
@@ -138,7 +137,7 @@ jobs:
             COLOR=3066993
             TITLE="🚀 Nouvelle Release Deepstone"
           else
-            COLOR=15158332
+            COLOR=3447003
             TITLE="🔁 Build Deepstone"
           fi
 
@@ -154,15 +153,15 @@ jobs:
                 title: $title,
                 color: $color,
                 thumbnail: {
-                  url: "https://deep.deepstone.fr/storage/img/deepstone-server-survie.png"
+                  url: "https://deepstone.fr/logo.png"
                 },
                 fields: [
                   { name: "🧩 Version", value: $version, inline: true },
-                  { name: "📊 Temps de build", value: $duration, inline: true },
+                  { name: "📊 Temps total build", value: $duration, inline: true },
                   { name: "📝 Changelog", value: $changelog, inline: false },
                   { name: "⚙️ Workflow", value: $run, inline: false }
                 ],
-                footer: { text: "Deepstone Studio CI" },
+                footer: { text: "Deepstone Studio CI 2026" },
                 timestamp: now | todate
               }]
             }' > payload.json
