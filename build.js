@@ -152,13 +152,25 @@ class Index {
         return file;
     }
 
-    async iconSet() {
-        const buffer = fs.readFileSync('src/assets/images/icon/icon.png');
+    async iconSet(url) {
+        let buffer;
+        
+        if (url && url.startsWith('http')) {
+            // Télécharger l'image depuis l'URL
+            const fetch = require('node-fetch');
+            const response = await fetch(url);
+            buffer = await response.buffer();
+        } else {
+            // Utiliser l'image locale par défaut
+            buffer = fs.readFileSync('src/assets/images/icon/icon.png');
+        }
+        
         let image = await Jimp.read(buffer);
         image = await image.resize({ w: 256, h: 256 }).getBuffer(JimpMime.png);
         fs.writeFileSync("src/assets/images/icon/icon.icns", png2icons.createICNS(image, png2icons.BILINEAR, 0));
         fs.writeFileSync("src/assets/images/icon/icon.ico", png2icons.createICO(image, png2icons.HERMITE, 0, false));
         fs.writeFileSync("src/assets/images/icon/icon.png", image);
+        console.log('Icons générées avec succès');
     }
 }
 

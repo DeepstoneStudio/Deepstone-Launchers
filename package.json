@@ -1,5 +1,5 @@
 {
-    "name": "Deepstone-Launcher",
+    "name": "deepstone-launcher",
     "preductname": "Deepstone Launcher",
     "version": "0.0.1",
     "description": "Launcher Mincraft pour le serveur Deepstone",
@@ -14,7 +14,7 @@
         "start": "cross-env-shell NODE_ENV=dev electron .",
         "dev": "cross-env-shell DEV_TOOL=open nodemon --exec npm start",
         "build": "node build.js --obf=true --build=platform",
-        "icon": "node build.js --icon"
+        "icon": "node build.js --icon=https://deep.deepstone.fr/storage/img/deepstone-server-survie.png"
     },
     "license": "CCANC",
     "nodemonConfig": {
