@@ -1,21 +1,23 @@
-# module du helios launcher
 name: Launcher Build
+
 on:
   push:
     branches: [ master ]
+  release:
+    types: [published]
 
 jobs:
   create-release:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Get version
         run: echo "version=$(jq -r .version package.json)" >> $GITHUB_ENV
       
       - name: Create Release
-        id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.DEEP_TOKEN }}
@@ -34,75 +36,44 @@ jobs:
         os: [macos-14, ubuntu-latest, windows-latest]
 
     steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v1
+      - name: Checkout
+        uses: actions/checkout@v3
 
-      - name: Set up Node
+      - name: Setup Node
         uses: actions/setup-node@v3
         with:
           node-version: 18.x
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: 3.x
 
       - name: Install Dependencies
         run: npm ci
-        shell: bash
 
       - name: Build
         env:
-          GH_TOKEN: ${{ secrets.deep_token }}
+          GH_TOKEN: ${{ secrets.DEEP_TOKEN }}
         run: npm run build
-        shell: bash
-   discord:
+
+  discord:
     runs-on: ubuntu-latest
-    needs: build
-    if: ${{ (github.event_name == 'push' || github.event_name == 'release') && needs.build.result == 'success' }}
+    needs: build-launcher
+    if: success()
+
     steps:
       - name: Envoyer message Discord
-        shell: bash
         run: |
-          set -euo pipefail
-
           WEBHOOK_URL="${{ secrets.DISCORD_WEBHOOK_URL }}"
+
           if [ -z "$WEBHOOK_URL" ]; then
             echo "Secret DISCORD_WEBHOOK_URL manquant."
             exit 1
           fi
 
-          if [ "${{ github.event_name }}" = "push" ]; then
-            AUTHOR="${{ github.actor }}"
-            COMMIT_MSG="${{ github.event.head_commit.message }}"
-            COMMIT_URL="${{ github.event.head_commit.url }}"
-            VERSION="${{ needs.build.outputs.gradle_version }}"
-            JAR="${{ needs.build.outputs.jar_name }}"
-
-            CONTENT="$(printf '%s\n' \
-              "✅ **Build OK — Deepstone Launcher**" \
-              "🧩 Version : $VERSION" \
-              "📦 Jar : $JAR" \
-              "👤 $AUTHOR" \
-              "📝 $COMMIT_MSG" \
-              "🔗 $COMMIT_URL")"
-          fi
-
-          if [ "${{ github.event_name }}" = "release" ]; then
-            VERSION="${{ github.event.release.tag_name }}"
-            URL="${{ github.event.release.html_url }}"
-            CHANGELOG="${{ github.event.release.body }}"
-            [ -z "$CHANGELOG" ] && CHANGELOG="(pas de détails)"
-
-            CONTENT="$(printf '%s\n' \
-              "✅ **Release publiée : Deepstone Launcher**" \
-              "🧩 Version : $VERSION" \
-              "" \
-              "📝 Notes :" \
-              "$CHANGELOG" \
-              "" \
-              "🔗 $URL")"
-          fi
+          CONTENT="✅ Build OK — Deepstone Launcher
+          🔗 https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
           PAYLOAD=$(jq -n --arg content "$CONTENT" '{content: $content}')
-          curl -sS -H "Content-Type: application/json" -d "$PAYLOAD" "$WEBHOOK_URL"
+          curl -H "Content-Type: application/json" -d "$PAYLOAD" "$WEBHOOK_URL"
