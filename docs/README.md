@@ -74,9 +74,9 @@ Si vous téléchargez à partir des Releases, sélectionnez le programme d'insta
 
  Plateforme | Fichier |
 | -------- | ---- |
-| Windows x64 | `Selvania-Launcher-win-x64.exe ` |
-| macOS x64 | `Selvania-Launcher-mac-x64.dmg` |
-| macOS arm64 | `Selvania-Launcher-mac-arm64.dmg` |
-| Linux x64 | `Selvania-Launcher-linux-x86_64.AppImage` |
+| Windows x64 | `Deepstone-Launcher-win-x64.exe ` |
+| macOS x64 | `Deepstone-Launcher-mac-x64.dmg` |
+| macOS arm64 | `Deepstone-Launcher-mac-arm64.dmg` |
+| Linux x64 | `Deepstone-Launcher-linux-x86_64.AppImage` |
 
 ---
