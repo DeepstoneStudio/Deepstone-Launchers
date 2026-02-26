@@ -91,12 +91,16 @@ jobs:
 
       - run: npm ci
 
-      - name: Build with timer
+      # ⚡ Build avec timer universel multi-OS
+      - name: Build with timer (multi-OS)
         run: |
-          START=$(date +%s)
-          npm run build
-          END=$(date +%s)
-          echo $((END - START)) > duration.txt
+          node -e "
+            const { execSync } = require('child_process');
+            const start = Date.now();
+            execSync('npm run build', { stdio: 'inherit' });
+            const duration = Math.round((Date.now() - start)/1000);
+            require('fs').writeFileSync('duration.txt', duration.toString());
+          "
 
       - name: Upload duration
         uses: actions/upload-artifact@v4
@@ -149,12 +153,10 @@ jobs:
             --arg run "$RUN_URL" \
             --argjson color "$COLOR" \
             '{
-              embeds: [{
+              embeds: [ {
                 title: $title,
                 color: $color,
-                thumbnail: {
-                  url: "https://deepstone.fr/logo.png"
-                },
+                thumbnail: { url: "https://deep.deepstone.fr/storage/img/deepstone-server-survie.png" },
                 fields: [
                   { name: "🧩 Version", value: $version, inline: true },
                   { name: "📊 Temps total build", value: $duration, inline: true },
@@ -163,7 +165,7 @@ jobs:
                 ],
                 footer: { text: "Deepstone Studio CI 2026" },
                 timestamp: now | todate
-              }]
+              } ]
             }' > payload.json
 
           curl -H "Content-Type: application/json" \
