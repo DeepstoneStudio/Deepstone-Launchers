@@ -1,12 +1,12 @@
 {
     "name": "deepstone-launcher",
     "preductname": "Deepstone Launcher",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "description": "Launcher Mincraft pour le serveur Deepstone",
     "main": "src/app.js",
     "author": {
         "name": "Deepstone-Studio,luuxis, Inc.",
-        "email": "contact@luuxis.fr",
+        "email": "deepstone.studio@gamil.com",
         "url": "https://deep.deepstone.fr"
     },
     "url": "https://deep.deepstone.fr/launcher",
