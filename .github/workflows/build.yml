@@ -1,21 +1,51 @@
-name: Deepstone Launcher CI
+name: Deepstone Launcher ULTRA CI
 
 on:
   push:
     branches: [ master ]
 
+permissions:
+  contents: write
+
 jobs:
-  prepare:
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.bump.outputs.version }}
-      changelog: ${{ steps.changelog.outputs.log }}
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-14]
 
     steps:
       - uses: actions/checkout@v4
 
-      # 🔐 Auto bump PATCH (local, pas de push)
-      - name: Bump version locally
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.os }}
+          path: dist/*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.bump.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start timer
+        id: timer
+        run: echo "start=$(date +%s)" >> $GITHUB_OUTPUT
+
+      - name: Bump version
         id: bump
         run: |
           CURRENT=$(jq -r .version package.json)
@@ -26,120 +56,75 @@ jobs:
           jq ".version = \"$NEW\"" package.json > tmp.json && mv tmp.json package.json
           echo "version=$NEW" >> $GITHUB_OUTPUT
 
-      # 🏷️ Changelog auto (10 commits)
       - name: Generate changelog
-        id: changelog
+        id: log
         run: |
-          LOG=$(git log -10 --pretty=format:"• %s")
           echo "log<<EOF" >> $GITHUB_OUTPUT
-          echo "$LOG" >> $GITHUB_OUTPUT
+          git log -10 --pretty=format:"• %s" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-  release:
-    needs: prepare
-    runs-on: ubuntu-latest
-    outputs:
-      release_id: ${{ steps.create_release.outputs.id }}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Create GitHub Release + tag
-        id: create_release
-        env:
-          TOKEN: ${{ secrets.DEEP_TOKEN }}
-          VERSION: ${{ needs.prepare.outputs.version }}
-          CHANGELOG: ${{ needs.prepare.outputs.changelog }}
-        run: |
-          RESPONSE=$(curl -s -X POST \
-            -H "Authorization: token $TOKEN" \
-            -H "Content-Type: application/json" \
-            https://api.github.com/repos/${{ github.repository }}/releases \
-            -d "{
-              \"tag_name\": \"v$VERSION\",
-              \"target_commitish\": \"master\",
-              \"name\": \"v$VERSION\",
-              \"body\": \"$CHANGELOG\",
-              \"draft\": false,
-              \"prerelease\": false
-            }")
-
-          echo "id=$(echo $RESPONSE | jq -r .id)" >> $GITHUB_OUTPUT
-
-  build:
-    needs: release
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [macos-14, ubuntu-latest, windows-latest]
-
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 18.x
-      - run: npm ci
-      - name: Build launcher
-        run: npm run build
-      - name: Upload build as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: launcher-${{ matrix.os }}
-          path: ./dist/*  # <-- adapte selon ton dossier de build
-          
-  attach-assets:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
-      - name: Attach builds to release
-        env:
-          TOKEN: ${{ secrets.DEEP_TOKEN }}
-          RELEASE_ID: ${{ needs.release.outputs.release_id }}
-        run: |
-          for f in artifacts/launcher-*/*; do
-            FILENAME=$(basename "$f")
-            echo "Uploading $FILENAME..."
-            curl -s -X POST \
-              -H "Authorization: token $TOKEN" \
-              -H "Content-Type: application/octet-stream" \
-              --data-binary @"$f" \
-              "https://uploads.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID/assets?name=$FILENAME"
-          done
 
-  discord:
-    needs: attach-assets
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
-      - name: Send Discord Embed
+      - name: Create Release
+        id: release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.bump.outputs.version }}
+          name: v${{ steps.bump.outputs.version }}
+          body: |
+            🚀 Deepstone Launcher v${{ steps.bump.outputs.version }}
+
+            ${{ steps.log.outputs.log }}
+          draft: false
+          prerelease: false
+          files: artifacts/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.DEEP_TOKEN }}
+
+      - name: End timer
+        id: end
         run: |
-          WEBHOOK="${{ secrets.DISCORD_WEBHOOK_URL }}"
-          VERSION="${{ needs.prepare.outputs.version }}"
-          CHANGELOG="${{ needs.prepare.outputs.changelog }}"
-          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          END=$(date +%s)
+          START=${{ steps.timer.outputs.start }}
+          DURATION=$((END - START))
+          echo "duration=$DURATION" >> $GITHUB_OUTPUT
+
+      - name: Discord Notification
+        run: |
+          VERSION=${{ steps.bump.outputs.version }}
+          DURATION=${{ steps.end.outputs.duration }}
+          WEBHOOK=${{ secrets.DISCORD_WEBHOOK_URL }}
+
+          RELEASE_URL="https://github.com/${{ github.repository }}/releases/latest"
+
+          EXE_URL=$(ls artifacts/**/**/*.exe 2>/dev/null | head -n1)
+          DMG_URL=$(ls artifacts/**/**/*.dmg 2>/dev/null | head -n1)
+          APPIMAGE_URL=$(ls artifacts/**/**/*.AppImage 2>/dev/null | head -n1)
 
           jq -n \
-            --arg title "🚀 Nouvelle Release Deepstone" \
             --arg version "$VERSION" \
-            --arg changelog "$CHANGELOG" \
-            --arg run "$RUN_URL" \
-            --argjson color 3066993 \
+            --arg duration "$DURATION sec" \
+            --arg release "$RELEASE_URL" \
+            --arg exe "$EXE_URL" \
+            --arg dmg "$DMG_URL" \
+            --arg app "$APPIMAGE_URL" \
             '{
-              embeds: [ {
-                title: $title,
-                color: $color,
-                thumbnail: { url: "https://deep.deepstone.fr/storage/img/deepstone-server-survie.png" },
+              embeds: [{
+                title: "🚀 Nouvelle Release Deepstone",
+                color: 3066993,
                 fields: [
-                  { name: "🧩 Version", value: $version, inline: true },
-                  { name: "📝 Changelog", value: $changelog, inline: false },
-                  { name: "⚙️ Workflow", value: $run, inline: false }
+                  {name: "🧩 Version", value: $version, inline: true},
+                  {name: "⏱ Build time", value: $duration, inline: true},
+                  {name: "⬇ Windows", value: ($exe // "N/A"), inline: false},
+                  {name: "⬇ macOS", value: ($dmg // "N/A"), inline: false},
+                  {name: "⬇ Linux", value: ($app // "N/A"), inline: false},
+                  {name: "🔗 Release", value: $release, inline: false}
                 ],
-                footer: { text: "Deepstone Studio CI 2026" },
+                footer: {text: "Deepstone Studio CI"},
                 timestamp: now | todate
-              } ]
+              }]
             }' > payload.json
 
           curl -H "Content-Type: application/json" \
