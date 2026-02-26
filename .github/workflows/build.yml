@@ -80,7 +80,7 @@ jobs:
             JAR="${{ needs.build.outputs.jar_name }}"
 
             CONTENT="$(printf '%s\n' \
-              "✅ **Build OK — DeepstonePlugin**" \
+              "✅ **Build OK — Deepstone Launcher**" \
               "🧩 Version : $VERSION" \
               "📦 Jar : $JAR" \
               "👤 $AUTHOR" \
