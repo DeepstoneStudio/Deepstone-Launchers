@@ -56,3 +56,53 @@ jobs:
           GH_TOKEN: ${{ secrets.deep_token }}
         run: npm run build
         shell: bash
+   discord:
+    runs-on: ubuntu-latest
+    needs: build
+    if: ${{ (github.event_name == 'push' || github.event_name == 'release') && needs.build.result == 'success' }}
+    steps:
+      - name: Envoyer message Discord
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          WEBHOOK_URL="${{ secrets.DISCORD_WEBHOOK_URL }}"
+          if [ -z "$WEBHOOK_URL" ]; then
+            echo "Secret DISCORD_WEBHOOK_URL manquant."
+            exit 1
+          fi
+
+          if [ "${{ github.event_name }}" = "push" ]; then
+            AUTHOR="${{ github.actor }}"
+            COMMIT_MSG="${{ github.event.head_commit.message }}"
+            COMMIT_URL="${{ github.event.head_commit.url }}"
+            VERSION="${{ needs.build.outputs.gradle_version }}"
+            JAR="${{ needs.build.outputs.jar_name }}"
+
+            CONTENT="$(printf '%s\n' \
+              "✅ **Build OK — DeepstonePlugin**" \
+              "🧩 Version : $VERSION" \
+              "📦 Jar : $JAR" \
+              "👤 $AUTHOR" \
+              "📝 $COMMIT_MSG" \
+              "🔗 $COMMIT_URL")"
+          fi
+
+          if [ "${{ github.event_name }}" = "release" ]; then
+            VERSION="${{ github.event.release.tag_name }}"
+            URL="${{ github.event.release.html_url }}"
+            CHANGELOG="${{ github.event.release.body }}"
+            [ -z "$CHANGELOG" ] && CHANGELOG="(pas de détails)"
+
+            CONTENT="$(printf '%s\n' \
+              "✅ **Release publiée : Deepstone Launcher**" \
+              "🧩 Version : $VERSION" \
+              "" \
+              "📝 Notes :" \
+              "$CHANGELOG" \
+              "" \
+              "🔗 $URL")"
+          fi
+
+          PAYLOAD=$(jq -n --arg content "$CONTENT" '{content: $content}')
+          curl -sS -H "Content-Type: application/json" -d "$PAYLOAD" "$WEBHOOK_URL"
