@@ -1,32 +1,81 @@
-# module du helios launcher
-name: Launcher Build
+name: Deepstone Launcher CI
+
 on:
   push:
     branches: [ master ]
 
 jobs:
-  create-release:
+  prepare:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.bump.outputs.version }}
+      changelog: ${{ steps.changelog.outputs.log }}
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Get version
-        run: echo "version=$(jq -r .version package.json)" >> $GITHUB_ENV
-      
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.DEEP_TOKEN }}
+      - uses: actions/checkout@v4
         with:
-          tag_name: ${{ env.version }}
-          release_name: release ${{ env.version }}
-          draft: false
-          prerelease: ${{ contains(env.version, 'beta') || contains(env.version, 'alpha') }}
+          fetch-depth: 0
 
-  build-launcher:
-    needs: create-release
+      # 🔐 Auto bump PATCH
+      - name: Bump version
+        id: bump
+        run: |
+          CURRENT=$(jq -r .version package.json)
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+          PATCH=$((PATCH + 1))
+          NEW="$MAJOR.$MINOR.$PATCH"
+
+          jq ".version = \"$NEW\"" package.json > tmp.json && mv tmp.json package.json
+          echo "version=$NEW" >> $GITHUB_OUTPUT
+
+      # 🏷️ Changelog auto (10 commits)
+      - name: Generate changelog
+        id: changelog
+        run: |
+          LOG=$(git log -10 --pretty=format:"• %s")
+          echo "log<<EOF" >> $GITHUB_OUTPUT
+          echo "$LOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+  release:
+    needs: prepare
+    runs-on: ubuntu-latest
+    outputs:
+      created: ${{ steps.create.outputs.created }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create release if not exists
+        id: create
+        env:
+          TOKEN: ${{ secrets.DEEP_TOKEN }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+          CHANGELOG: ${{ needs.prepare.outputs.changelog }}
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: token $TOKEN" \
+            https://api.github.com/repos/${{ github.repository }}/releases/tags/$VERSION)
+
+          if [ "$STATUS" = "200" ]; then
+            echo "created=false" >> $GITHUB_OUTPUT
+          else
+            curl -s -X POST \
+              -H "Authorization: token $TOKEN" \
+              -H "Content-Type: application/json" \
+              https://api.github.com/repos/${{ github.repository }}/releases \
+              -d "{
+                \"tag_name\": \"$VERSION\",
+                \"name\": \"release $VERSION\",
+                \"body\": \"$CHANGELOG\",
+                \"draft\": false,
+                \"prerelease\": false
+              }"
+            echo "created=true" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    needs: [prepare, release]
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -34,25 +83,91 @@ jobs:
         os: [macos-14, ubuntu-latest, windows-latest]
 
     steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v1
+      - uses: actions/checkout@v4
 
-      - name: Set up Node
-        uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: 18.x
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - run: npm ci
+
+      # ⚡ Build avec timer universel multi-OS
+      - name: Build with timer (multi-OS)
+        run: |
+          node -e "
+            const { execSync } = require('child_process');
+            const start = Date.now();
+            execSync('npm run build', { stdio: 'inherit' });
+            const duration = Math.round((Date.now() - start)/1000);
+            require('fs').writeFileSync('duration.txt', duration.toString());
+          "
+
+      - name: Upload duration
+        uses: actions/upload-artifact@v4
         with:
-          python-version: 3.x
+          name: duration-${{ matrix.os }}
+          path: duration.txt
 
-      - name: Install Dependencies
-        run: npm ci
-        shell: bash
+  discord:
+    needs: [prepare, release, build]
+    runs-on: ubuntu-latest
+    if: always()
 
-      - name: Build
-        env:
-          GH_TOKEN: ${{ secrets.deep_token }}
-        run: npm run build
-        shell: bash
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Calculate total duration
+        id: duration
+        run: |
+          TOTAL=0
+          for f in artifacts/duration-*/duration.txt; do
+            D=$(cat "$f")
+            TOTAL=$((TOTAL + D))
+          done
+          echo "total=$TOTAL" >> $GITHUB_OUTPUT
+
+      - name: Send Discord Embed
+        run: |
+          WEBHOOK="${{ secrets.DISCORD_WEBHOOK_URL }}"
+          VERSION="${{ needs.prepare.outputs.version }}"
+          CHANGELOG="${{ needs.prepare.outputs.changelog }}"
+          CREATED="${{ needs.release.outputs.created }}"
+          DURATION="${{ steps.duration.outputs.total }}"
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          if [ "$CREATED" = "true" ]; then
+            COLOR=3066993
+            TITLE="🚀 Nouvelle Release Deepstone"
+          else
+            COLOR=3447003
+            TITLE="🔁 Build Deepstone"
+          fi
+
+          jq -n \
+            --arg title "$TITLE" \
+            --arg version "$VERSION" \
+            --arg changelog "$CHANGELOG" \
+            --arg duration "${DURATION}s" \
+            --arg run "$RUN_URL" \
+            --argjson color "$COLOR" \
+            '{
+              embeds: [ {
+                title: $title,
+                color: $color,
+                thumbnail: { url: "https://deep.deepstone.fr/storage/img/deepstone-server-survie.png" },
+                fields: [
+                  { name: "🧩 Version", value: $version, inline: true },
+                  { name: "📊 Temps total build", value: $duration, inline: true },
+                  { name: "📝 Changelog", value: $changelog, inline: false },
+                  { name: "⚙️ Workflow", value: $run, inline: false }
+                ],
+                footer: { text: "Deepstone Studio CI 2026" },
+                timestamp: now | todate
+              } ]
+            }' > payload.json
+
+          curl -H "Content-Type: application/json" \
+               -d @payload.json \
+               "$WEBHOOK"
