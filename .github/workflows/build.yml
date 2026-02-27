@@ -1,173 +1,79 @@
-name: Deepstone Launcher ULTRA CI
+name: Launcher Build
 
 on:
   push:
     branches: [ master ]
-
-permissions:
-  contents: write
+  release:
+    types: [published]
 
 jobs:
-  build:
-    name: Build (${{ matrix.os }})
+  create-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Get version
+        run: echo "version=$(jq -r .version package.json)" >> $GITHUB_ENV
+      
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.DEEP_TOKEN }}
+        with:
+          tag_name: ${{ env.version }}
+          release_name: release ${{ env.version }}
+          draft: false
+          prerelease: ${{ contains(env.version, 'beta') || contains(env.version, 'alpha') }}
+
+  build-launcher:
+    needs: create-release
     runs-on: ${{ matrix.os }}
 
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-14]
+        os: [macos-14, ubuntu-latest, windows-latest]
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 18.x
 
-      - name: Install dependencies
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.x
+
+      - name: Install Dependencies
         run: npm ci
 
-      - name: Build Launcher
+      - name: Build
+        env:
+          GH_TOKEN: ${{ secrets.DEEP_TOKEN }}
         run: npm run build
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-${{ matrix.os }}
-          path: dist/*
-
-  release:
-    name: Release
-    needs: build
+  discord:
     runs-on: ubuntu-latest
+    needs: build-launcher
+    if: success()
 
     steps:
-      - uses: actions/checkout@v4
-
-      # ⏱ Start timer
-      - name: Start timer
-        id: start
-        run: echo "time=$(date +%s)" >> $GITHUB_OUTPUT
-
-      # 🔢 Auto bump PATCH
-      - name: Bump version
-        id: bump
+      - name: Envoyer message Discord
         run: |
-          CURRENT=$(jq -r .version package.json)
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
-          PATCH=$((PATCH + 1))
-          NEW="$MAJOR.$MINOR.$PATCH"
+          WEBHOOK_URL="${{ secrets.DISCORD_WEBHOOK_URL }}"
 
-          jq ".version = \"$NEW\"" package.json > tmp.json && mv tmp.json package.json
-          echo "version=$NEW" >> $GITHUB_OUTPUT
-
-      # 🧠 Smart changelog
-      - name: Generate smart changelog
-        id: log
-        run: |
-          COMMITS=$(git log -20 --pretty=format:"%s")
-
-          FEATURES=""
-          FIXES=""
-          PERF=""
-          OTHER=""
-
-          while IFS= read -r line; do
-            if [[ "$line" == *"Bump version"* ]] || [[ "$line" == *"Merge"* ]]; then
-              continue
-            fi
-
-            if [[ "$line" == feat* ]]; then
-              FEATURES+="• ${line#feat: }\n"
-            elif [[ "$line" == fix* ]]; then
-              FIXES+="• ${line#fix: }\n"
-            elif [[ "$line" == perf* ]]; then
-              PERF+="• ${line#perf: }\n"
-            else
-              OTHER+="• $line\n"
-            fi
-          done <<< "$COMMITS"
-
-          CHANGELOG=""
-
-          if [ ! -z "$FEATURES" ]; then
-            CHANGELOG+="### 🚀 Nouveautés\n$FEATURES\n"
+          if [ -z "$WEBHOOK_URL" ]; then
+            echo "Secret DISCORD_WEBHOOK_URL manquant."
+            exit 1
           fi
 
-          if [ ! -z "$FIXES" ]; then
-            CHANGELOG+="### 🛠 Corrections\n$FIXES\n"
-          fi
+          CONTENT="✅ Build OK — Deepstone Launcher
+          🔗 https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-          if [ ! -z "$PERF" ]; then
-            CHANGELOG+="### ⚡ Optimisations\n$PERF\n"
-          fi
-
-          if [ ! -z "$OTHER" ]; then
-            CHANGELOG+="### 📦 Divers\n$OTHER\n"
-          fi
-
-          CHANGELOG=$(echo -e "$CHANGELOG" | sed ':a;N;$!ba;s/\n/\\n/g')
-          echo "log=$CHANGELOG" >> $GITHUB_OUTPUT
-
-      # 📥 Download builds
-      - uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      # 🚀 Create Release + Upload assets
-      - name: Create Release
-        id: release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ steps.bump.outputs.version }}
-          name: v${{ steps.bump.outputs.version }}
-          body: |
-            🚀 Deepstone Launcher v${{ steps.bump.outputs.version }}
-
-            ${{ steps.log.outputs.log }}
-          draft: false
-          prerelease: false
-          files: artifacts/**/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.DEEP_TOKEN }}
-
-      # ⏱ End timer
-      - name: End timer
-        id: end
-        run: |
-          END=$(date +%s)
-          START=${{ steps.start.outputs.time }}
-          DURATION=$((END - START))
-          echo "duration=$DURATION" >> $GITHUB_OUTPUT
-
-      # 🔔 Discord Embed
-      - name: Discord Notification
-        if: success()
-        run: |
-          VERSION=${{ steps.bump.outputs.version }}
-          DURATION=${{ steps.end.outputs.duration }}
-          WEBHOOK=${{ secrets.DISCORD_WEBHOOK_URL }}
-          RELEASE_URL="https://github.com/${{ github.repository }}/releases/latest"
-
-          jq -n \
-            --arg version "$VERSION" \
-            --arg duration "$DURATION sec" \
-            --arg release "$RELEASE_URL" \
-            '{
-              embeds: [{
-                title: "🚀 Nouvelle Release Deepstone",
-                color: 3066993,
-                fields: [
-                  {name: "🧩 Version", value: $version, inline: true},
-                  {name: "⏱ Build time", value: $duration, inline: true},
-                  {name: "🔗 Télécharger", value: $release, inline: false}
-                ],
-                footer: {text: "Deepstone Studio CI"},
-                timestamp: now | todate
-              }]
-            }' > payload.json
-
-          curl -H "Content-Type: application/json" \
-               -d @payload.json \
-               "$WEBHOOK"
+          PAYLOAD=$(jq -n --arg content "$CONTENT" '{content: $content}')
+          curl -H "Content-Type: application/json" -d "$PAYLOAD" "$WEBHOOK_URL"
