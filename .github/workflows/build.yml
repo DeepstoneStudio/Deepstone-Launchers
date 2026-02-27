@@ -1,23 +1,21 @@
+# module du helios launcher
 name: Launcher Build
-
 on:
   push:
     branches: [ master ]
-  release:
-    types: [published]
 
 jobs:
-  create-release:
+create-release:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v2
 
       - name: Get version
         run: echo "version=$(jq -r .version package.json)" >> $GITHUB_ENV
       
       - name: Create Release
+        id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.DEEP_TOKEN }}
@@ -36,28 +34,29 @@ jobs:
         os: [macos-14, ubuntu-latest, windows-latest]
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - name: Check out Git repository
+        uses: actions/checkout@v1
 
-      - name: Setup Node
+      - name: Set up Node
         uses: actions/setup-node@v3
         with:
           node-version: 18.x
 
-      - name: Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: 3.x
 
       - name: Install Dependencies
         run: npm ci
+        shell: bash
 
       - name: Build
         env:
-          GH_TOKEN: ${{ secrets.DEEP_TOKEN }}
+          GH_TOKEN: ${{ secrets.github_token }}
         run: npm run build
-
-  discord:
+        shell: bash
+ discord:
     runs-on: ubuntu-latest
     needs: build-launcher
     if: success()
@@ -77,3 +76,4 @@ jobs:
 
           PAYLOAD=$(jq -n --arg content "$CONTENT" '{content: $content}')
           curl -H "Content-Type: application/json" -d "$PAYLOAD" "$WEBHOOK_URL"
+  

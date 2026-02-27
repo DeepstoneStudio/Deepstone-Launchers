@@ -1,7 +1,7 @@
 {
     "name": "deepstone-launcher",
     "preductname": "Deepstone Launcher",
-    "version": "0.0.5",
+    "version": "0.0.6",
     "description": "Launcher Mincraft pour le serveur Deepstone",
     "main": "src/app.js",
     "author": {
