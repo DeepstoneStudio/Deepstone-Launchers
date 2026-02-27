@@ -194,6 +194,20 @@
     justify-content: center;
 }
 
+.social-block:hover {
+    display: flex;
+    background: rgb(26, 26, 26);
+    width: 90px;
+    height: 90px;
+    margin-bottom: 1rem;
+    border-radius: 10px;
+    font-size: 2rem;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+}
+
+
 .social-block .icon-social {
     pointer-events: none;
     background-repeat: no-repeat;
@@ -249,12 +263,24 @@
     align-items: center;
 }
 
+
 .play-instance {
     display: flex;
     justify-content: space-between;
     align-items: center;
     position: relative;
-    border: solid 3px var(--element-color);
+    background-color: #006eff;
+    border-radius: 15px;
+    height: 3.2rem;
+    padding-right: 1.9rem;
+}
+
+.play-instance:hover {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    background-color: #0051ff;
     border-radius: 15px;
     height: 3.2rem;
     padding-right: 1.9rem;
@@ -264,23 +290,14 @@
     border: none;
     border-radius: 10px;
     background: none;
-    color: rgb(0, 140, 255);
+    color: rgb(255, 255, 255);
     font-size: 2rem;
     font-weight: bolder;
     padding: 0 1.5rem;
     pointer-events: none;
 }
 
-play-btn:hover{
-    border: none;
-    border-radius: 10px;
-    background: none;
-    color: rgb(0, 89, 255);
-    font-size: 2rem;
-    font-weight: bolder;
-    padding: 0 1.5rem;
-    pointer-events: none;
-}
+
 
 .instance-select {
     display: flex;
@@ -288,7 +305,7 @@ play-btn:hover{
     position: absolute;
     right: -3;
     top: -2;
-    color: var(--element-color);
+    color: #ffffff;
     font-size: 1rem;
     height: calc(100% - 1px);
     border: solid 3px var(--element-color);
@@ -329,8 +346,20 @@ play-btn:hover{
     width: 3rem;
     height: 3rem;
     font-size: 3rem;
-    color: var(--element-color);
+    color: #ffffff;
     margin: 0 1.5rem;
+    border-radius: 15px;
+    background-color: #006eff;
+}
+
+.settings-btn:hover {
+    width: 3rem;
+    height: 3rem;
+    font-size: 3rem;
+    color: #ffffff;
+    margin: 0 1.5rem;
+    border-radius: 15px;
+    background-color: #0044ff;
 }
 
 .instance-popup {
