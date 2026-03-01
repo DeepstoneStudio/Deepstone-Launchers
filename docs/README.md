@@ -12,7 +12,7 @@
 
 <p align="center">
     <a href="http://deep.deepstone.fr/discord">
-        <img src="https://invidget.switchblade.xyz/e9q7Yr2cuQ">
+        <img src="https://invidget.switchblade.xyz/ng4nxt5xvH">
     </a>
 </p>
 
