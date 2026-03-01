@@ -271,6 +271,7 @@
     position: relative;
     background-color: #006eff;
     border-radius: 15px;
+    cursor: pointer;
     height: 3.2rem;
     padding-right: 1.9rem;
 }
@@ -282,6 +283,7 @@
     position: relative;
     background-color: #0051ff;
     border-radius: 15px;
+    cursor: pointer;
     height: 3.2rem;
     padding-right: 1.9rem;
 }
@@ -349,6 +351,7 @@
     color: #ffffff;
     margin: 0 1.5rem;
     border-radius: 15px;
+    cursor: pointer;
     background-color: #006eff;
 }
 
@@ -359,6 +362,7 @@
     color: #ffffff;
     margin: 0 1.5rem;
     border-radius: 15px;
+    cursor: pointer;
     background-color: #0044ff;
 }
 
