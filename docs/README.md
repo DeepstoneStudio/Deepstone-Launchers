@@ -4,7 +4,7 @@
 
 [<p align="center">]()
 ![GitHub all releases](https://img.shields.io/github/downloads/DeepstoneStudio/Deepstone-Launchers/total?style=for-the-badge)
-![Discord](https://img.shields.io/discord/1391186636888346754?style=for-the-badge)
+![Discord](https://img.shields.io/discord/1391120077155336302?style=for-the-badge)
 ![GitHub package.json version](https://img.shields.io/github/package-json/v/DeepstoneStudio/Deepstone-Launchers?style=for-the-badge)
 [<p align="center">]()
 ![GitHub forks](https://img.shields.io/github/forks/DeepstoneStudio/Deepstone-Launchers?style=for-the-badge)
@@ -12,7 +12,7 @@
 
 <p align="center">
     <a href="http://deep.deepstone.fr/discord">
-        <img src="https://invidget.switchblade.xyz/e9q7Yr2cuQ">
+        <img src="https://invidget.switchblade.xyz/ng4nxt5xvH">
     </a>
 </p>
 
