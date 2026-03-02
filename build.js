@@ -64,7 +64,7 @@ class Index {
                 generateUpdatesFilesForAllChannels: false,
                 appId: preductname,
                 productName: preductname,
-                copyright: `Copyright © 2020-${new Date().getFullYear()} Luuxis`,
+                copyright: `Copyright © 2025-2028${new Date().getFullYear()} DeepstoneStudio`,
                 artifactName: "${productName}-${os}-${arch}.${ext}",
                 extraMetadata: { main: 'app/app.js' },
                 files: ["app/**/*", "package.json", "LICENSE.md"],
