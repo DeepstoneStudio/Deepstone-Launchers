@@ -1,20 +1,20 @@
 {
-    "name": "deepstone-launcher",
-    "preductname": "Deepstone Launcher",
-    "version": "0.0.10",
+    "name": "chakra-launcher",
+    "preductname": "Chakra Launcher",
+    "version": "0.0.11",
     "description": "Launcher Mincraft pour le serveur Deepstone",
     "main": "src/app.js",
     "author": {
         "name": "Deepstone-Studio,luuxis, Inc.",
         "email": "deepstone.studio@gamil.com",
-        "url": "https://deep.deepstone.fr"
+        "url": "https://mineweb.deepstone.fr"
     },
-    "url": "https://deep.deepstone.fr/launchers",
+    "url": "https://launcher.chakra.deepstone.fr/",
     "scripts": {
         "start": "cross-env-shell NODE_ENV=dev electron .",
         "dev": "cross-env-shell DEV_TOOL=open nodemon --exec npm start",
         "build": "node build.js --obf=true --build=platform",
-        "icon": "node build.js --icon=https://deep.deepstone.fr/storage/img/deepstone-server-survie.png"
+        "icon": "node build.js --icon=https://mineweb.deepstone.fr/storage/img/icon.png"
     },
     "license": "CCANC",
     "nodemonConfig": {

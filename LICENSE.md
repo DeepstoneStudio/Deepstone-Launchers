@@ -1,6 +1,6 @@
-🔖 Licence et mentions légales Deepstone Studio v1.1 (2025-2028)
+🔖 Licence et mentions légales Orinstone Studio v1.1 (2025-2029)
 
-© 2025-2028 Deepstone Studio. Tous droits réservés.
+© 2025-2029 Orinstone Studio. Tous droits réservés.
 Studio fondé par metal54400.
 
 Propriété
@@ -8,7 +8,7 @@ Propriété
 Toutes les créations (images, visuels, ressources, textes, concepts et contenus) publiées par Deepstone Studio sont la propriété exclusive de Deepstone Studio.
 
 Le Launcher Deepstone est une création logicielle développée par metal54400 pour Deepstone Studio.
-Les droits d’exploitation du launcher appartiennent à Deepstone Studio, sauf mention contractuelle contraire.
+Les droits d’exploitation du launcher appartiennent à Orinstone Studio, sauf mention contractuelle contraire.
 
 Utilisation autorisée
 
@@ -20,7 +20,7 @@ Crédit obligatoire
 
 Toute utilisation publique doit inclure la mention :
 
-“Créé par Deepstone Studio © 2025-2028 – Launcher développé par Luuxis”
+“Créé par Orinstone Studio © 2025-2029 – Launcher développé par Luuxis”
 
 Mention légale sur Minecraft
 
